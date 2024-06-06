@@ -7,6 +7,6 @@
 
     <style name="Theme.ToDoListApp" parent="Base.Theme.ToDoListApp" />
     <style name="SplashTheme" parent="Base.Theme.ToDoListApp">
-        <item name="android:windowBackground">@color/white</item>
+        <item name="android:windowBackground">@drawable/background</item>
     </style>
 </resources>
