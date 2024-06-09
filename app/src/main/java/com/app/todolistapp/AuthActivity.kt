@@ -31,6 +31,7 @@ class AuthActivity : AppCompatActivity() {
     private lateinit var googleSignInLauncher: ActivityResultLauncher<Intent>
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Thread.sleep(1000)
         setTheme(R.style.Base_Theme_ToDoListApp)
         enableEdgeToEdge()
         setContentView(R.layout.activity_auth)
