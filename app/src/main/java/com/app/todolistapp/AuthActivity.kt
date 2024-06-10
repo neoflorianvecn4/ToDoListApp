@@ -134,9 +134,13 @@ class AuthActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Check if user is signed in (non-null) and update UI accordingly.
         val currentUser = auth.currentUser
         if (currentUser != null) {
-            reload()
+            // User is signed in, navigate to HomeActivity
+            val intent = Intent(this, HomeActivity::class.java)
+            startActivity(intent)
+            finish() // Finish AuthActivity to prevent going back to it
         }
     }
 
@@ -185,18 +189,6 @@ class AuthActivity : AppCompatActivity() {
                     passwordEditText.text.clear()
                     emailEditText.requestFocus()
                 }
-            }
-        }
-    }
-
-    private fun reload() {
-        val user = FirebaseAuth.getInstance().currentUser
-        user?.reload()?.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val updatedUser = FirebaseAuth.getInstance().currentUser
-                updateUI(updatedUser)
-            } else {
-                Toast.makeText(this, "Error al recargar la información del usuario", Toast.LENGTH_SHORT).show()
             }
         }
     }
