@@ -83,6 +83,10 @@ class MyAdapter(private val userList: MutableList<User>,
             showEditDB(user)
         }
 
+        holder.delete.setOnClickListener {
+            showDeleteDB(user)
+        }
+
     }
 
 
@@ -97,9 +101,49 @@ class MyAdapter(private val userList: MutableList<User>,
         val priority: TextView = itemView.findViewById(R.id.tvPriority)
         val priorityIndicator: View = itemView.findViewById(R.id.colorCard)
         val edit: ImageButton = itemView.findViewById(R.id.btnEdit)
+        val delete: ImageButton = itemView.findViewById(R.id.btnDelete)
 
     }
 
+    private fun showDeleteDB(user: User){
+        val builder = AlertDialog.Builder(context, R.style.MyAlertDialogStyle)
+        builder.setTitle("Eliminar Tarea")
+        builder.setMessage("¿Estás seguro de que quieres eliminar esta tarea?")
+        builder.setPositiveButton("Sí") { _, _ ->
+            // Lógica para eliminar la tarea
+            eliminarTarea(user)
+        }
+        builder.setNegativeButton("No") { dialog, _ ->
+            dialog.dismiss()
+        }
+        builder.show()
+    }
+
+    private fun eliminarTarea(user: User) {
+        val db = FirebaseFirestore.getInstance()
+
+        // Obtener el ID de la tarea a eliminar
+        val tareaId = user.idTarea
+
+        // Verificar si el ID de la tarea es válido
+        if (tareaId != " ") {
+            // Eliminar la tarea de Firestore
+            db.collection("tareas").document(tareaId)
+                .delete()
+                .addOnSuccessListener {
+                    // Tarea eliminada exitosamente
+                    cargarDatos()
+                }
+                .addOnFailureListener { e ->
+                    // Error al eliminar la tarea
+                    Log.e(TAG, "Error al eliminar la tarea", e)
+                    Toast.makeText(context, "Error al eliminar la tarea", Toast.LENGTH_SHORT).show()
+                }
+        } else {
+            // El ID de la tarea no es válido
+            Toast.makeText(context, "ID de tarea no válido", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     private fun showEditDB(user: User) {
         val dialog = AlertDialog.Builder(context, R.style.MyAlertDialogStyle)
