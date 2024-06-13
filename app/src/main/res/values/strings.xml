@@ -21,7 +21,7 @@
     <string name="descbtncalendar">Descripción</string>
     <string name="selecthour">Selecciona fecha y hora</string>
     <string name="txtNombre">Nombre:</string>
-    <string name="txtDesc">Decripción:</string>
+    <string name="txtDesc">Descripción:</string>
     <string name="txtFecha">Fecha y hora:</string>
     <string name="txtPrioridad">Prioridad:</string>
     <string name="txtNombre2">Jafet</string>
@@ -36,4 +36,6 @@
     <string name="media">Media</string>
     <string name="urgente">Urgente</string>
     <string name="exit">Cerrar Sesión</string>
+    <string name="image_description3">Descripción de la imagen</string>
+    <string name="Todas">(Todas)</string>
 </resources>

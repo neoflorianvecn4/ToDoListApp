@@ -122,6 +122,7 @@ class AuthActivity : AppCompatActivity() {
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     Log.d(TAG, "signInWithCredential:success")
+                    Toast.makeText(this, "Bienvenido", Toast.LENGTH_SHORT).show()
                     val user = auth.currentUser
                     updateUI(user)
                 } else {
