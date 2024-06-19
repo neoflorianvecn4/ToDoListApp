@@ -6,8 +6,10 @@ import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
@@ -26,14 +28,15 @@ import android.widget.CheckedTextView
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
-import androidx.appcompat.widget.SearchView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -59,6 +62,10 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var userArrayList: ArrayList<User>
     private lateinit var myAdapter: MyAdapter
+    private val REQUEST_CODE_NOTIFICATIONS = 123
+    private val REQUEST_CODE_SCHEDULE_ALARM = 100
+    private val REQUEST_CODE_POST_NOTIFICATION = 101
+
     @SuppressLint("InflateParams")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,7 +83,9 @@ class HomeActivity : AppCompatActivity() {
             .requestEmail()
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
+
         checkTask()
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -89,11 +98,66 @@ class HomeActivity : AppCompatActivity() {
         val adapter = MyAdapter(userArrayList,this, resources, recyclerView)
         recyclerView.adapter = adapter
 
-
         cargarDatos()
+        requestPermissionsIfNecessary()
     }
 
-     private fun checkTask() {
+    // Función para verificar y solicitar permisos
+    private fun requestPermissionsIfNecessary() {
+        if (!isScheduleExactAlarmPermissionGranted() || !isPostNotificationPermissionGranted()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(
+                            android.Manifest.permission.SCHEDULE_EXACT_ALARM,
+                            android.Manifest.permission.POST_NOTIFICATIONS
+                        ),
+                        REQUEST_CODE_SCHEDULE_ALARM
+                    )
+                }
+            }
+        }
+    }
+
+    // Función para verificar si el permiso SCHEDULE_EXACT_ALARM está concedido
+    private fun isScheduleExactAlarmPermissionGranted(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.SCHEDULE_EXACT_ALARM
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            TODO("VERSION.SDK_INT < S")
+        }
+    }
+
+    // Función para verificar si el permiso POST_NOTIFICATIONS está concedido
+    private fun isPostNotificationPermissionGranted(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            TODO("VERSION.SDK_INT < TIRAMISU")
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            REQUEST_CODE_SCHEDULE_ALARM, REQUEST_CODE_POST_NOTIFICATION -> {
+            }
+        }
+    }
+
+    private fun checkTask() {
         val currentUser = FirebaseAuth.getInstance().currentUser
         currentUser?.let { user ->
             val userId = user.uid
@@ -244,7 +308,7 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun cargarDatosConPrioridadBaja(){
+    private fun cargarDatosConPrioridadBaja() {
         val currentUser = FirebaseAuth.getInstance().currentUser
 
         if (currentUser != null) {
@@ -256,19 +320,26 @@ class HomeActivity : AppCompatActivity() {
                 .get()
                 .addOnSuccessListener { querySnapshot ->
                     val userArrayList = mutableListOf<User>()
-                    for (document in querySnapshot.documents) {
-                        val user = document.toObject(User::class.java)
-                        user?.let {
-                            Log.d(TAG, "Nombre: ${it.nombre}")
-                            Log.d(TAG, "Descripción: ${it.descripcion}")
-                            Log.d(TAG, "Fecha y Hora: ${it.fecha_hora}")
-                            Log.d(TAG, "Prioridad: ${it.prioridad}")
-                            userArrayList.add(it)
+
+                    if (querySnapshot.isEmpty) {
+                        // Mostrar mensaje de que no hay tareas de prioridad baja
+                        Toast.makeText(this, "No tienes tareas de prioridad baja", Toast.LENGTH_SHORT).show()
+                        // Puedes también actualizar la UI o tomar alguna acción adecuada aquí
+                    } else {
+                        for (document in querySnapshot.documents) {
+                            val user = document.toObject(User::class.java)
+                            user?.let {
+                                Log.d(TAG, "Nombre: ${it.nombre}")
+                                Log.d(TAG, "Descripción: ${it.descripcion}")
+                                Log.d(TAG, "Fecha y Hora: ${it.fecha_hora}")
+                                Log.d(TAG, "Prioridad: ${it.prioridad}")
+                                userArrayList.add(it)
+                            }
                         }
+                        userArrayList.sortBy { it.fecha_hora }
+                        findViewById<ImageView>(R.id.logoImageView)
+                        recyclerView.adapter = MyAdapter(userArrayList, this, resources, recyclerView)
                     }
-                    userArrayList.sortBy { it.fecha_hora }
-                    findViewById<ImageView>(R.id.logoImageView)
-                    recyclerView.adapter = MyAdapter(userArrayList, this, resources, recyclerView)
                 }
                 .addOnFailureListener { exception ->
                     Log.e(TAG, "Error al cargar datos", exception)
@@ -278,6 +349,7 @@ class HomeActivity : AppCompatActivity() {
             Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_SHORT).show()
         }
     }
+
 
     private fun cargarDatosConPrioridadMedia(){
         val currentUser = FirebaseAuth.getInstance().currentUser
@@ -291,19 +363,26 @@ class HomeActivity : AppCompatActivity() {
                 .get()
                 .addOnSuccessListener { querySnapshot ->
                     val userArrayList = mutableListOf<User>()
-                    for (document in querySnapshot.documents) {
-                        val user = document.toObject(User::class.java)
-                        user?.let {
-                            Log.d(TAG, "Nombre: ${it.nombre}")
-                            Log.d(TAG, "Descripción: ${it.descripcion}")
-                            Log.d(TAG, "Fecha y Hora: ${it.fecha_hora}")
-                            Log.d(TAG, "Prioridad: ${it.prioridad}")
-                            userArrayList.add(it)
+
+                    if (querySnapshot.isEmpty) {
+                        // Mostrar mensaje de que no hay tareas de prioridad baja
+                        Toast.makeText(this, "No tienes tareas de prioridad media", Toast.LENGTH_SHORT).show()
+                        // Puedes también actualizar la UI o tomar alguna acción adecuada aquí
+                    } else {
+                        for (document in querySnapshot.documents) {
+                            val user = document.toObject(User::class.java)
+                            user?.let {
+                                Log.d(TAG, "Nombre: ${it.nombre}")
+                                Log.d(TAG, "Descripción: ${it.descripcion}")
+                                Log.d(TAG, "Fecha y Hora: ${it.fecha_hora}")
+                                Log.d(TAG, "Prioridad: ${it.prioridad}")
+                                userArrayList.add(it)
+                            }
                         }
+                        userArrayList.sortBy { it.fecha_hora }
+                        findViewById<ImageView>(R.id.logoImageView)
+                        recyclerView.adapter = MyAdapter(userArrayList, this, resources, recyclerView)
                     }
-                    userArrayList.sortBy { it.fecha_hora }
-                    findViewById<ImageView>(R.id.logoImageView)
-                    recyclerView.adapter = MyAdapter(userArrayList,this, resources, recyclerView)
                 }
                 .addOnFailureListener { exception ->
                     Log.e(TAG, "Error al cargar datos", exception)
@@ -326,19 +405,26 @@ class HomeActivity : AppCompatActivity() {
                 .get()
                 .addOnSuccessListener { querySnapshot ->
                     val userArrayList = mutableListOf<User>()
-                    for (document in querySnapshot.documents) {
-                        val user = document.toObject(User::class.java)
-                        user?.let {
-                            Log.d(TAG, "Nombre: ${it.nombre}")
-                            Log.d(TAG, "Descripción: ${it.descripcion}")
-                            Log.d(TAG, "Fecha y Hora: ${it.fecha_hora}")
-                            Log.d(TAG, "Prioridad: ${it.prioridad}")
-                            userArrayList.add(it)
+
+                    if (querySnapshot.isEmpty) {
+                        // Mostrar mensaje de que no hay tareas de prioridad baja
+                        Toast.makeText(this, "No tienes tareas de prioridad urgente", Toast.LENGTH_SHORT).show()
+                        // Puedes también actualizar la UI o tomar alguna acción adecuada aquí
+                    } else {
+                        for (document in querySnapshot.documents) {
+                            val user = document.toObject(User::class.java)
+                            user?.let {
+                                Log.d(TAG, "Nombre: ${it.nombre}")
+                                Log.d(TAG, "Descripción: ${it.descripcion}")
+                                Log.d(TAG, "Fecha y Hora: ${it.fecha_hora}")
+                                Log.d(TAG, "Prioridad: ${it.prioridad}")
+                                userArrayList.add(it)
+                            }
                         }
+                        userArrayList.sortBy { it.fecha_hora }
+                        findViewById<ImageView>(R.id.logoImageView)
+                        recyclerView.adapter = MyAdapter(userArrayList, this, resources, recyclerView)
                     }
-                    userArrayList.sortBy { it.fecha_hora }
-                    findViewById<ImageView>(R.id.logoImageView)
-                    recyclerView.adapter = MyAdapter(userArrayList, this, resources, recyclerView)
                 }
                 .addOnFailureListener { exception ->
                     Log.e(TAG, "Error al cargar datos", exception)
