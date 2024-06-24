@@ -35,7 +35,6 @@ class AuthActivity : AppCompatActivity() {
         setTheme(R.style.Base_Theme_ToDoListApp)
         enableEdgeToEdge()
         setContentView(R.layout.activity_auth)
-
         googleSignInLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
